@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hypixel Stats</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Variablen ──────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0c0f;
+      --surface:  #111418;
+      --card:     #161b22;
+      --border:   #21262d;
+      --accent:   #f6c90e;
+      --accent2:  #e05c2e;
+      --text:     #e6edf3;
+      --muted:    #7d8590;
+      --green:    #3fb950;
+      --font-hd:  'Rajdhani', sans-serif;
+      --font-mono:'Share Tech Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-hd);
+      font-size: 16px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Hintergrund-Grid ───────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(246,201,14,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(246,201,14,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .wrap {
+      position: relative; z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .logo {
+      display: inline-flex; align-items: center; gap: 12px;
+      font-size: 2.6rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .logo span { color: var(--accent); }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: var(--accent);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    header p {
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: .85rem;
+      margin-top: 8px;
+      letter-spacing: .1em;
+    }
+
+    /* ── Suchleiste ─────────────────────────────────────── */
+    .search-wrap {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 48px;
+    }
+
+    .search-wrap input {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      padding: 14px 20px;
+      outline: none;
+      transition: border-color .2s;
+      clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap input::placeholder { color: var(--muted); }
+
+    .btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      font-family: var(--font-hd);
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 14px 32px;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    }
+    .btn:hover  { background: #ffe040; }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Fehlermeldung ──────────────────────────────────── */
+    .error-box {
+      display: none;
+      background: rgba(224, 92, 46, .12);
+      border: 1px solid var(--accent2);
+      color: var(--accent2);
+      font-family: var(--font-mono);
+      font-size: .9rem;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+    }
+
+    /* ── Lade-Indikator ─────────────────────────────────── */
+    .loader {
+      display: none;
+      text-align: center;
+      padding: 60px 0;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      letter-spacing: .2em;
+    }
+    .loader::before {
+      content: '';
+      display: block;
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Ergebnis-Bereich ───────────────────────────────── */
+    #result { display: none; }
+
+    /* ── Spieler-Header-Card ────────────────────────────── */
+    .player-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+      overflow: hidden;
+      animation: fadeUp .4s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(16px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    .player-skin {
+      width: 120px;
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      border-right: 1px solid var(--border);
+    }
+    .player-skin img { display: block; width: 80px; image-rendering: pixelated; }
+
+    .player-info {
+      padding: 24px 28px;
+    }
+
+    .player-name {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      line-height: 1;
+    }
+
+    .rank-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #000;
+      font-family: var(--font-mono);
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      margin-top: 6px;
+      letter-spacing: .1em;
+    }
+    .rank-badge.no-rank {
+      background: var(--border);
+      color: var(--muted);
+    }
+
+    .player-meta {
+      display: flex;
+      gap: 32px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .meta-item { }
+    .meta-item .label {
+      font-family: var(--font-mono);
+      font-size: .7rem;
+      color: var(--muted);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .meta-item .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+
+    /* ── Spiel-Tabs ─────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 0;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: var(--font-hd);
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 12px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color .2s, border-color .2s;
+    }
+    .tab-btn:hover  { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Stats-Grid ─────────────────────────────────────── */
+    .game-panel { display: none; }
+    .game-panel.active { display: grid; }
+
+    .stats-grid {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 2px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      animation: fadeUp .3s ease both;
+    }
+
+    .stat-box {
+      background: var(--card);
+      padding: 20px 24px;
+    }
+    .stat-box .s-label {
+      font-family: var(--font-mono);
+      font-size: .7rem;
+      color: var(--muted);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .stat-box .s-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      color: var(--text);
+    }
+
+    /* ── Live Status ────────────────────────────────────── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 14px 20px;
+      margin-bottom: 4px;
+      font-family: var(--font-mono);
+      font-size: .85rem;
+      animation: fadeUp .4s ease both;
+      animation-delay: .1s;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.offline { background: var(--muted); }
+
+    .status-text { color: var(--muted); }
+    .status-text .highlight { color: var(--accent); font-weight: 700; }
+    .status-text .map-name  { color: var(--text); }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      margin-top: 60px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: .75rem;
+      letter-spacing: .1em;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⬡</div>
+      Hypixel<span>Stats</span>
+    </div>
+    <p>// Hypixel Network · Player Statistics Tracker</p>
+  </header>
+
+  <div class="search-wrap">
+    <input id="nameInput" type="text" placeholder="Minecraft-Name eingeben..." autocomplete="off" />
+    <button class="btn" id="searchBtn" onclick="search()">Suchen</button>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+  <div class="loader" id="loader">Lade Daten...</div>
+
+  <div id="result">
+
+    <div class="player-card">
+      <div class="player-skin">
+        <img id="skinImg" src="" alt="Skin"
+             onerror="this.src='https://crafatar.com/avatars/'+this.dataset.uuid+'?size=128&overlay'" />
+      </div>
+      <div class="player-info">
+        <div class="player-name" id="playerName">—</div>
+        <div class="rank-badge" id="rankBadge">—</div>
+        <div class="player-meta">
+          <div class="meta-item">
+            <div class="label">Level</div>
+            <div class="value" id="metaLevel">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="label">Karma</div>
+            <div class="value" id="metaKarma">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="label">Achievements</div>
+            <div class="value" id="metaAchievements">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">
+      <div class="status-dot" id="statusDot"></div>
+      <div class="status-text" id="statusText"></div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    <div id="gamePanels"></div>
+
+  </div>
+
+  <footer>
+    Powered by <a href="https://api.hypixel.net" target="_blank">api.hypixel.net</a>
+    &nbsp;·&nbsp; Skin via <a href="https://mc-heads.net" target="_blank">mc-heads.net</a>
+    &nbsp;·&nbsp; Not  affiliated or endorsed with Hypixel
+  </footer>
+
+</div>
+
+<script>
+  const input = document.getElementById("nameInput");
+  input.addEventListener("keydown", e => { if (e.key === "Enter") search(); });
+
+  function setLoading(on) {
+    document.getElementById("loader").style.display = on ? "block" : "none";
+    document.getElementById("result").style.display = on ? "none" : "";
+    document.getElementById("searchBtn").disabled = on;
+    document.getElementById("errorBox").style.display = "none";
+  }
+
+  function showError(msg) {
+    const box = document.getElementById("errorBox");
+    box.textContent = "// FEHLER: " + msg;
+    box.style.display = "block";
+    document.getElementById("result").style.display = "none";
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("searchBtn").disabled = false;
+  }
+
+  async function search() {
+    const name = input.value.trim();
+    if (!name) return;
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`/api/player/${encodeURIComponent(name)}`);
+      const data = await res.json();
+
+      if (!res.ok) { showError(data.error || "Unbekannter Fehler"); return; }
+
+      // Spieler-Header befüllen
+      document.getElementById("playerName").textContent = data.username;
+      const skinImg = document.getElementById("skinImg");
+      skinImg.dataset.uuid = data.uuid;
+      skinImg.src = data.skin_url;
+      document.getElementById("metaLevel").textContent = data.level;
+      document.getElementById("metaKarma").textContent = data.karma;
+      document.getElementById("metaAchievements").textContent = data.achievement_points;
+
+      const badge = document.getElementById("rankBadge");
+      badge.textContent = data.rank;
+      badge.className = "rank-badge" + (data.rank === "Kein Rang" ? " no-rank" : "");
+
+      // Live-Status befüllen
+      const st   = data.status;
+      const dot  = document.getElementById("statusDot");
+      const stTx = document.getElementById("statusText");
+      dot.className = "status-dot " + (st.online ? "online" : "offline");
+
+      if (st.online && st.game) {
+        let txt = `<span class="highlight">${st.game}</span>`;
+        if (st.mode && st.mode !== "Lobby") txt += ` · ${st.mode}`;
+        if (st.map)  txt += ` · <span class="map-name">${st.map}</span>`;
+        stTx.innerHTML = "🟢 Spielt gerade: " + txt;
+      } else if (st.online) {
+        stTx.innerHTML = "🟢 Online — Lobby";
+      } else {
+        stTx.innerHTML = "⚫ Offline / API versteckt";
+      }
+
+      // Tabs + Panels generieren
+      const tabsEl   = document.getElementById("tabs");
+      const panelsEl = document.getElementById("gamePanels");
+      tabsEl.innerHTML = "";
+      panelsEl.innerHTML = "";
+
+      data.games.forEach((game, i) => {
+        // Tab
+        const btn = document.createElement("button");
+        btn.className = "tab-btn" + (i === 0 ? " active" : "");
+        btn.textContent = game.icon + " " + game.name;
+        btn.onclick = () => switchTab(i);
+        tabsEl.appendChild(btn);
+
+        // Panel
+        const panel = document.createElement("div");
+        panel.className = "game-panel stats-grid" + (i === 0 ? " active" : "");
+        panel.id = "panel-" + i;
+        game.stats.forEach(stat => {
+          panel.innerHTML += `
+            <div class="stat-box">
+              <div class="s-label">${stat.label}</div>
+              <div class="s-value">${stat.value}</div>
+            </div>`;
+        });
+        panelsEl.appendChild(panel);
+      });
+
+      setLoading(false);
+      document.getElementById("result").style.display = "block";
+
+    } catch (err) {
+      showError("Server nicht erreichbar. Läuft Flask?");
+    }
+  }
+
+  function switchTab(idx) {
+    document.querySelectorAll(".tab-btn").forEach((b, i) => b.classList.toggle("active", i === idx));
+    document.querySelectorAll(".game-panel").forEach((p, i) => p.classList.toggle("active", i === idx));
+  }
+</script>
+</body>
+</html>
