@@ -5,7 +5,6 @@ import os
 
 app = Flask(__name__)
 
-#API_KEY = "c023e9f8-7262-4dfa-9b8c-ccd41261e59e"
 API_KEY = os.environ.get("HYPIXEL_API_KEY","")
 BASE_URL = "https://api.hypixel.net"
 
